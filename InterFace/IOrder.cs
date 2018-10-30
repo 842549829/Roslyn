@@ -7,7 +7,7 @@ using Refit;
 namespace InterFace
 {
     [Export, Bundle]
-    public interface IOrder
+    public interface IOrder : IService
     {
         [HttpGet]
         Order Add(int id);
@@ -23,7 +23,7 @@ namespace InterFace
     }
 
     [Export]
-    public interface IService : IDisposable
+    public interface IService 
     {
     }
 }
