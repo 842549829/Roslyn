@@ -24,7 +24,7 @@ namespace Proxy
 
         static ProxyClass()
         {
-            PortsImporter.Ports<IService>();
+            //PortsImporter.Ports<IService>();
             IEnumerable<Type> typeServices = typeof(IService).Assembly.GetTypes().Where(type =>
             {
                 var typeInfo = type.GetTypeInfo();
