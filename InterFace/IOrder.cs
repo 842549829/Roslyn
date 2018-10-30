@@ -12,12 +12,14 @@ namespace InterFace
         [HttpGet]
         Order Add(int id);
 
+        [HttpGet("addorder/{id}/{name}")]
+        Order AddOrder(int id, string name);
+
         [HttpPost]
         Order Update(Order order);
 
         [HttpGet]
         Order Addx(string a);
-
     }
 
     [Export]

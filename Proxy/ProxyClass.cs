@@ -18,6 +18,8 @@ namespace Proxy
 {
     public class ProxyClass
     {
+        private const string address = "http://localhost:57649/api/";
+
         static readonly IDictionary<string, Type> services = new ConcurrentDictionary<string, Type>(8, 128);
 
         static ProxyClass()
@@ -93,10 +95,80 @@ namespace Proxy
                 #region 需要自己实现的业务代码
 
                 /*业务*/
-                if (method.CustomAttributes.Any(item => item.AttributeType == typeof(HttpGetAttribute)))
+                string url = address + typeService.Name.ToLower();
+                if (method.GetCustomAttribute(typeof(HttpGetAttribute), false) is HttpGetAttribute httpgetattribute)
                 {
-                    codes.AppendLine("HttpClientUtility client = new HttpClientUtility(\"http://localhost:57649/api/values\");");
-                    codes.AppendFormat("return client.Get<{0}>(new string[] {{ {1}.ToString() }});", method.ReturnType, parameters.First().Name);
+                    var parameterValueList = new List<string>();
+                    foreach (var parameter in parameters)
+                    {
+                        parameterValueList.Add(parameter.Name + ".ToString()");
+                    }
+                    string parameterValue = string.Join(",", parameterValueList);
+                    if (httpgetattribute.Template == null)
+                    {
+                        string httpGetMethodBody = CreateHttpGetMethodBody(url, method.ReturnType.ToString(), parameterValue);
+                        codes.AppendLine(httpGetMethodBody);
+                    }
+                    else
+                    {
+                        var template = httpgetattribute.Template;
+                        string[] templateArray = template.Split('/');
+                        if (templateArray.Length >= 1)
+                        {
+                            if (templateArray[0].Contains("{"))
+                            {
+                                parameterValueList.Clear();
+                                foreach (var t in templateArray)
+                                {
+                                    parameterValueList.Add(t.Replace("{", string.Empty).Replace("}", string.Empty) + ".ToString()");
+                                }
+                                string httpGetMethodBody = CreateHttpGetMethodBody(url, method.ReturnType.ToString(), string.Join(",", parameterValueList));
+                                codes.AppendLine(httpGetMethodBody);
+                            }
+                            else
+                            {
+                                url += "/" + templateArray[0];
+                                parameterValueList.Clear();
+                                for (int i = 0; i < templateArray.Length; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        parameterValueList.Add(templateArray[i].Replace("{", string.Empty).Replace("}", string.Empty) + ".ToString()");
+                                    }
+                                }
+                                string httpGetMethodBody = CreateHttpGetMethodBody(url, method.ReturnType.ToString(), string.Join(",", parameterValueList));
+                                codes.AppendLine(httpGetMethodBody);
+                            }
+                        }
+                        else
+                        {
+                            codes.AppendLine("return null;");
+                        }
+                    }
+                }
+                else if (method.GetCustomAttribute(typeof(HttpPostAttribute), false) is HttpPostAttribute httpPostAttribute)
+                {
+                    var parameterType = parameters.First();
+                    if (httpPostAttribute.Template == null)
+                    {
+                        string httpGetMethodBody = CreateHttpPostMethodBody(url, parameterType.ParameterType.FullName, method.ReturnType.ToString(), parameterType.Name);
+                        codes.AppendLine(httpGetMethodBody);
+                    }
+                    else
+                    {
+                        var template = httpPostAttribute.Template;
+                        string[] templateArray = template.Split('/');
+                        if (templateArray.Length == 1)
+                        {
+                            url += "/" + templateArray[0];
+                            string httpGetMethodBody = CreateHttpPostMethodBody(url, parameterType.ParameterType.FullName, method.ReturnType.ToString(), parameterType.Name);
+                            codes.AppendLine(httpGetMethodBody);
+                        }
+                        else
+                        {
+                            codes.AppendLine("return null;");
+                        }
+                    }
                 }
                 else
                 {
@@ -104,13 +176,32 @@ namespace Proxy
                 }
 
                 #endregion
-
                 codes.AppendLine("}");
-                codes.AppendLine();
             }
+            codes.AppendLine("}");
+            codes.AppendLine("}");
+            var result = codes.ToString();
+            return result;
+        }
 
-            codes.AppendLine("}");
-            codes.AppendLine("}");
+        private static string CreateHttpGetMethodBody(string url, string returnType, string parameterValue)
+        {
+            StringBuilder codes = new StringBuilder();
+            codes.AppendFormat("HttpClientUtility client = new HttpClientUtility(\"{0}\");", url);
+            codes.AppendLine();
+            codes.AppendFormat("return client.Get<{0}>(new string[] {{ {1} }});", returnType, parameterValue);
+            codes.AppendLine();
+            return codes.ToString();
+        }
+
+
+        private static string CreateHttpPostMethodBody(string url, string parameterType, string returnType, string parameterName)
+        {
+            StringBuilder codes = new StringBuilder();
+            codes.AppendFormat("HttpClientUtility client = new HttpClientUtility(\"{0}\");", url);
+            codes.AppendLine();
+            codes.AppendFormat("return client.Post<{0},{1}>({2});", parameterType, returnType, parameterName);
+            codes.AppendLine();
             return codes.ToString();
         }
 
@@ -148,12 +239,3 @@ namespace Proxy
         }
     }
 }
-
-
-
-
-
-
-
-
-

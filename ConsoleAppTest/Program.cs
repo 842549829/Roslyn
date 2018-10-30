@@ -6,6 +6,7 @@ using InterFace;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
+using Model;
 using Proxy;
 
 namespace ConsoleAppTest
@@ -17,7 +18,7 @@ namespace ConsoleAppTest
 
             /*动态编译*/
             var order = ProxyClass.Generate<IOrder>();
-            var dss = order.Add(2);
+            var dss = order.Update(new Order{ Id = 222222});
 
 
             /*简单实例*/
