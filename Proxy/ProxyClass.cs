@@ -215,7 +215,8 @@ namespace Proxy
             Assembly assembly = null;
             SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code);
             string assemblyName = Path.GetRandomFileName();
-            var references = AppDomain.CurrentDomain.GetAssemblies().Select(x => MetadataReference.CreateFromFile(x.Location));
+            var references = AppDomain.CurrentDomain.GetReferanceAssemblies().Select(x => MetadataReference.CreateFromFile(x.Location));
+            //var references = AppDomain.CurrentDomain.GetAssemblies().Select(x => MetadataReference.CreateFromFile(x.Location));
             CSharpCompilation compilation = CSharpCompilation.Create(assemblyName, new[] { syntaxTree }, references, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
             using (var ms = new MemoryStream())
             {
@@ -237,5 +238,32 @@ namespace Proxy
             //object obj = Activator.CreateInstance(type);
             //type.InvokeMember("Write", BindingFlags.Default | BindingFlags.InvokeMethod, null, obj, new object[] { "打印一句话" });
         }
+    }
+
+    public static class Extents
+    {
+        public static List<Assembly> GetReferanceAssemblies(this AppDomain domain)
+        {
+            var list = new List<Assembly>();
+            foreach (var assembly in domain.GetAssemblies())
+            {
+                GetReferanceAssemblies(assembly, list);
+            }
+            return list;
+        }
+
+        static void GetReferanceAssemblies(Assembly assembly, List<Assembly> list)
+        {
+            foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
+            {
+                var ass = Assembly.Load(referencedAssembly);
+                if (!list.Contains(ass))
+                {
+                    list.Add(ass);
+                    GetReferanceAssemblies(ass, list);
+                }
+            }
+        }
+
     }
 }
